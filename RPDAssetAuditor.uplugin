@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 2,
+	"VersionName": "1.1.0",
+	"SupportedTargetPlatforms": [ "Win64", "Linux", "Mac" ],
+	"FriendlyName": "Rapid Asset Auditor",
+	"Description": "Scans and audits project assets — naming conventions, references, missing assets, and quality checks.",
+	"Category": "Editor",
+	"CreatedBy": "Rafid Muqsith",
+	"CreatedByURL": "https://rmuqsith.github.io",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "RPDAssetAuditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}

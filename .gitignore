@@ -1,0 +1,52 @@
+# Unreal Engine Plugin - Standard GitIgnore
+
+# Build Artifacts
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+Build/
+
+# User-specific files
+.vs/
+*.sln
+*.suo
+*.user
+*.userprefs
+*.idle
+*.opendb
+*.db
+
+# Temporary / Log files
+*.log
+*.tmp
+*.bak
+*.orig
+*.swp
+
+# Compiled binaries
+*.exe
+*.dll
+*.pdb
+*.exp
+*.lib
+*.obj
+*.app
+
+# Mac / Linux specific
+.DS_Store
+*.pyc
+
+# Local Config
+/Config/DefaultEditorPerProjectUserSettings.ini
+/Config/DefaultInput.ini
+/Config/DefaultGameUserSettings.ini
+Content/WBP_*.uasset
+
+# Exported audit results — generated output / review inputs, not source
+AuditResults.csv
+List Assets.csv
+AuditReport_preview.html
+
+# Downloaded reference docs (third-party, not part of the plugin)
+Project Optimise Tool Documentation.md
