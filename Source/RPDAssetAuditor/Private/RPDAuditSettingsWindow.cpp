@@ -236,6 +236,44 @@ void SRPDAuditSettingsWindow::Open()
 					]
 				]
 
+				// ── Project Settings ──
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12, 0, 8)
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("Section_Project", "Project Rendering"))
+					.Font(FAppStyle::Get().GetFontStyle("HeadingExtraLarge"))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[
+					SNew(SCheckBox)
+					.IsChecked_Lambda([]() { return AuditRules::bVTEnabled ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+					.OnCheckStateChanged_Lambda([](ECheckBoxState State)
+					{
+						AuditRules::bVTEnabled = (State == ECheckBoxState::Checked);
+					})
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("ProjectUsesVT", "Project uses Virtual Textures"))
+						.ToolTipText(LOCTEXT("VTTooltip", "When checked: VirtualTextureMismatch rule checks textures without VT.\nWhen unchecked: the rule is skipped (all textures expected non-VT)."))
+						.Font(FAppStyle::Get().GetFontStyle("NormalFont"))
+					]
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[
+					SNew(SCheckBox)
+					.IsChecked_Lambda([]() { return AuditRules::bTextureStreamingEnabled ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+					.OnCheckStateChanged_Lambda([](ECheckBoxState State)
+					{
+						AuditRules::bTextureStreamingEnabled = (State == ECheckBoxState::Checked);
+					})
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("ProjectUsesStreaming", "Project uses Texture Streaming"))
+						.ToolTipText(LOCTEXT("StreamingTooltip", "When checked: NeverStream and TextureLODGroup rules run normally.\nWhen unchecked: both rules are skipped (streaming is off by default)."))
+						.Font(FAppStyle::Get().GetFontStyle("NormalFont"))
+					]
+				]
+
 				// ── Enabled Rules ──
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12, 0, 8)
 				[
@@ -271,14 +309,29 @@ void SRPDAuditSettingsWindow::Open()
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeRuleToggle(TEXT("VirtualTextureMismatch"), LOCTEXT("Rule_VT", "Texture: Virtual Texture Mismatch"), LOCTEXT("Rule_VT_Desc", "Texture streaming settings may be suboptimal for this texture usage.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("TextureStreamingBudget"), LOCTEXT("Rule_VRAM", "Texture: Streaming Budget"), LOCTEXT("Rule_VRAM_Desc", "Texture with high estimated VRAM footprint — consider reducing resolution or improving compression.")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeRuleToggle(TEXT("MissingSoundClass"), LOCTEXT("Rule_SndClass", "Sound: Missing Sound Class"), LOCTEXT("Rule_SndClass_Desc", "Sound without Sound Class may not respect audio volume mixing.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeRuleToggle(TEXT("MissingAttenuation"), LOCTEXT("Rule_Attn", "Sound: Missing Attenuation"), LOCTEXT("Rule_Attn_Desc", "Sound without Attenuation Asset may not attenuate properly over distance.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeRuleToggle(TEXT("UnusedAsset"), LOCTEXT("Rule_Unused", "Misc: Unused Asset"), LOCTEXT("Rule_Unused_Desc", "Assets not referenced by anything in the project. Candidates for cleanup.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("NiagaraHighRendererCount"), LOCTEXT("Rule_NiagaraRend", "Niagara: High Renderer Count"), LOCTEXT("Rule_NiagaraRend_Desc", "Niagara system with many emitters — GPU overhead per renderer.")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("NiagaraHighMaterialCount"), LOCTEXT("Rule_NiagaraMat", "Niagara: High Material Count"), LOCTEXT("Rule_NiagaraMat_Desc", "Niagara system references many unique materials — sampler cost.")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("NiagaraHighMeshCount"), LOCTEXT("Rule_NiagaraMesh", "Niagara: High Mesh Count"), LOCTEXT("Rule_NiagaraMesh_Desc", "Niagara system references many meshes — draw-call overhead.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeRuleToggle(TEXT("LongAnimSequence"), LOCTEXT("Rule_LongAnim", "Animation: Long Sequence"), LOCTEXT("Rule_LongAnim_Desc", "Very long animation sequences may have unnecessary frames. Adjust threshold in Rule Thresholds.")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("HighNotifyCount"), LOCTEXT("Rule_Notifies", "Animation: High Notify Count"), LOCTEXT("Rule_Notifies_Desc", "Many notifies in an animation — evaluate cost per frame.")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("HighCurveCount"), LOCTEXT("Rule_Curves", "Animation: High Curve Count"), LOCTEXT("Rule_Curves_Desc", "Many curves increase blending cost.")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("AdditiveAnimation"), LOCTEXT("Rule_Additive", "Animation: Additive Marker"), LOCTEXT("Rule_Additive_Desc", "Lists additive animation sequences (informational only).")) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeRuleToggle(TEXT("AnimationCompression"), LOCTEXT("Rule_Compress", "Animation: Compression Heuristic"), LOCTEXT("Rule_Compress_Desc", "Flags animations with high frame count relative to length — may benefit from key reduction.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeRuleToggle(TEXT("MasterMaterialBloat"), LOCTEXT("Rule_MatBloat", "Material: Master Material Bloat"), LOCTEXT("Rule_MatBloat_Desc", "Master materials with many parameters increase compilation time and complexity.")) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
@@ -377,7 +430,33 @@ void SRPDAuditSettingsWindow::Open()
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeThresholdBox(TEXT("SkeletalMatCount_Warning"), LOCTEXT("SkelMats_Warn", "SkelMats Warning >"), 5, 1, 20) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NiagaraEmitters_Warning"), LOCTEXT("NiagaraRend_Warn", "Niagara Emitters Warning >"), 8, 1, 50) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NiagaraEmitters_Critical"), LOCTEXT("NiagaraRend_Crit", "Niagara Emitters Critical >"), 15, 1, 50) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NiagaraMaterials_Warning"), LOCTEXT("NiagaraMat_Warn", "Niagara Materials Warning >"), 4, 1, 20) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NiagaraMaterials_Critical"), LOCTEXT("NiagaraMat_Crit", "Niagara Materials Critical >"), 8, 1, 20) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NiagaraMeshes_Warning"), LOCTEXT("NiagaraMesh_Warn", "Niagara Meshes Warning >"), 3, 1, 20) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NiagaraMeshes_Critical"), LOCTEXT("NiagaraMesh_Crit", "Niagara Meshes Critical >"), 6, 1, 20) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
 				[ MakeThresholdBox(TEXT("LongAnimSequence_Warning"), LOCTEXT("LongAnim_Warn", "AnimLength Warning > sec"), 30, 1, 300) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NotifyCount_Warning"), LOCTEXT("Notif_Warn", "NotifyCount Warning >"), 10, 1, 100) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("NotifyCount_Critical"), LOCTEXT("Notif_Crit", "NotifyCount Critical >"), 25, 1, 100) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("CurveCount_Warning"), LOCTEXT("Curve_Warn", "CurveCount Warning >"), 20, 1, 200) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("CurveCount_Critical"), LOCTEXT("Curve_Crit", "CurveCount Critical >"), 50, 1, 200) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("AnimCompression_WarnFramesPerSec"), LOCTEXT("CompFPS_Warn", "Comp: warn if FPS >"), 30, 5, 120) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("TextureStreamingBudget_Warning"), LOCTEXT("VRAM_Warn", "TexStreamingBudget Warning > MB"), 8, 1, 256) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 2)
+				[ MakeThresholdBox(TEXT("TextureStreamingBudget_Critical"), LOCTEXT("VRAM_Crit", "TexStreamingBudget Critical > MB"), 16, 1, 512) ]
 
 				// ── Naming Conventions ──
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12, 0, 8)

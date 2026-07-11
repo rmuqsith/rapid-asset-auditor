@@ -86,6 +86,7 @@ namespace AuditRules
 	extern FRPDAuditRule Rule_VirtualTextureMismatch;
 	extern FRPDAuditRule Rule_NeverStream;
 	extern FRPDAuditRule Rule_TextureLODGroup;
+	extern FRPDAuditRule Rule_TextureStreamingBudget;
 
 	// Sound
 	extern FRPDAuditRule Rule_MissingSoundClass;
@@ -101,6 +102,10 @@ namespace AuditRules
 
 	// Animation
 	extern FRPDAuditRule Rule_LongAnimSequence;
+	extern FRPDAuditRule Rule_HighNotifyCount;
+	extern FRPDAuditRule Rule_HighCurveCount;
+	extern FRPDAuditRule Rule_AdditiveAnimation;
+	extern FRPDAuditRule Rule_AnimationCompression;
 
 	// Material / Material Instance
 	extern FRPDAuditRule Rule_MasterMaterialBloat;
@@ -116,6 +121,11 @@ namespace AuditRules
 	extern FRPDAuditRule Rule_DirectMasterMaterialOnSkeletalMesh;
 	extern FRPDAuditRule Rule_UnusedMasterParameters;
 
+	// Niagara
+	extern FRPDAuditRule Rule_NiagaraHighRendererCount;
+	extern FRPDAuditRule Rule_NiagaraHighMaterialCount;
+	extern FRPDAuditRule Rule_NiagaraHighMeshCount;
+
 	// Blueprint
 	extern FRPDAuditRule Rule_BlueprintComplexParents;
 	extern FRPDAuditRule Rule_BlueprintComplexity;
@@ -125,6 +135,12 @@ namespace AuditRules
 
 	/** If true, Nanite rules are inverted: warn when Nanite IS enabled instead of when disabled */
 	extern bool bNaniteInverted;
+
+	/** If false, VirtualTextureMismatch rule is skipped (project doesn't use virtual textures) */
+	extern bool bVTEnabled;
+
+	/** If false, NeverStream and TextureLODGroup rules are skipped (project has texture streaming disabled) */
+	extern bool bTextureStreamingEnabled;
 
 	/** Rule configuration overrides: ThresholdName -> Value */
 	extern TMap<FString, int32> RuleConfig;

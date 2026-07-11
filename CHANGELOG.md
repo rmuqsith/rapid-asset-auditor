@@ -1,50 +1,69 @@
 # Changelog
 
-All notable changes to **Rapid Asset Auditor** are documented here.
-This project follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
+All notable changes to this project are documented here.
 
-- **MAJOR** — breaks a saved config or the export format, or a milestone reorganization.
-- **MINOR** — new rules or features, backward-compatible.
-- **PATCH** — bug fixes, rule wording/threshold tweaks.
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-_Add changes here as you work on `main`; move them under a new version heading when you cut a release._
+### Added
+- (none)
+
+### Fixed
+- (none)
+
+### Changed
+- (none)
+
+## [1.2.0] — 2026-07-11
+
+### Added
+- **VT Disabled toggle** — skip `VirtualTextureMismatch` rule when project doesn't use Virtual Textures (Settings → Project Rendering).
+- **Streaming Disabled toggle** — skip `NeverStream` and `TextureLODGroup` rules when texture streaming is disabled.
+- **Texture Streaming Budget** rule — flags textures with high estimated VRAM footprint, based on resolution, mip chain, and compression format.
+- **Niagara audit** — 3 new rules: high emitter/renderer count, high material reference count, high mesh reference count.
+- **Animation audit depth** — 4 new rules: high notify count, high curve count, additive animation marker, compression/frame-rate heuristic.
+- **AnimMontage naming prefix** (`AM_`) added to defaults.
+- Texture LOD Group advice fixed: no longer suggests removed `TC_EditorIcon`.
+- Niagara rules wired into asset-type filter so they actually run.
+
+### Fixed
+- Rule `VirtualTextureMismatch` can now be properly suppressed when VT project setting is off.
+- `NeverStream` and `TextureLODGroup` rules correctly account for texture streaming being disabled.
+- Niagara mesh references now read through typed renderer properties instead of generic object reflection.
+- Animation notify/curve rules read from asset-registry tags first (fast, no asset load).
+- UE5.5 API compatibility: additive anim type accessor, Niagara emitter data pointer, `FArrayProperty`/`FindFProperty` instead of deprecated `UArrayProperty`/`FindField`.
+- Various build blockers (missing `LongAnimSequence` body, BPP float precision, dangling UI slot).
 
 ## [1.1.0] — 2026-07-10
 
 ### Added
-- **Export to HTML** — one-click shareable report generated from the current audit results,
-  grouped by category (material debt first), severity-colored, with a health-score and counts
-  header. Self-contained single file, UTF-8; a lightweight complement to CSV export.
+- Platform presets (Mobile/VR, Console, PC) for threshold tuning.
+- Individual rule toggles with tooltip descriptions.
+- Config profiles (save/load/delete).
+- Naming convention prefixes (fully editable per type).
+- Material sprawl/consolidation checks.
+- Skeletal mesh LOD gate (matches static mesh threshold).
+- Scan progress bar with cancel support.
+- Multi-select to Content Browser (`Ctrl+B`).
+- HTML report export.
+- Health score (severity-weighted, non-zero for real projects).
+- Sortable/filterable results with severity colouring.
 
-## [1.0.0] — 2026-07-10
+### Fixed
+- Texture rules read authored import size instead of placeholder mip.
+- Material instance bloat only flags *unused* zero-override instances.
+- Animation rules no longer silently misfire in UE5.5.
+- Health score no longer collapses to zero on real projects.
 
-First distributable release. A read-only, **materials-first** asset auditor for Unreal Engine 5.5.
+## [1.0.0] — 2026-07-08
 
-### Audit
-- **Materials (primary focus):** master-material bloat, one-off masters, duplicate instances,
-  unused master parameters, direct-master-on-mesh (static & skeletal), a low-reuse master
-  consolidation signal, blend/shading-model mismatch, and high texture sampling.
-- **Meshes:** missing LODs (vertex-gated so tiny meshes aren't flagged), NoLODs + Nanite
-  sanity (deduplicated so a mesh isn't counted twice), high vertex count, missing
-  collision / physics asset.
-- **Textures:** authored-size aware — reads the true import size instead of the streamed
-  placeholder — and Max-Texture-Size aware; flags large resolution, non-power-of-two,
-  NeverStream, and LOD-group issues.
-- **Naming conventions:** per-type prefixes as a single source of truth, including a
-  surface vs. post-process material split (`M_` / `PPM_`).
-- **Sound / Blueprint / Misc:** hygiene checks tuned to avoid false positives — advisory
-  rules (e.g. attenuation, concurrency) are not treated as defects.
-
-### Workflow
-- One-click full audit with a project **Health Score**, severity filtering, and sortable
-  results including a folder Path column.
-- **CSV export** — RFC-4180 quoted and UTF-8, safe to open in Excel, Sheets, or pandas.
-- **Platform presets** (Mobile/VR · Console · PC) set every budget + Nanite mode at once.
-- Editable **thresholds** and named **profiles**, persisted per project across editor restarts.
-- Whole-project scans show **progress** and can be **cancelled**.
-
-### Notes
-- Read-only: the tool never modifies assets — it only reports.
-- Source plugin; requires a C++ project. Developed and tested against UE 5.5.
+### Added
+- Initial public release.
+- Core audit engine with per-asset rule framework.
+- Texture, static mesh, skeletal mesh, material, sound, blueprint, and misc hygiene rules.
+- CSV export.
+- Audit Settings window (rule toggles, thresholds, naming).
+- Multi-folder scan from Content Browser context menu.
+- Config persistence via `Config/RPDAssetAuditor.ini`.

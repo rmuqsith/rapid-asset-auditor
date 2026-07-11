@@ -36,6 +36,8 @@ TArray<FRPDAuditRule> FRPDAuditRuleRegistry::GetRulesForClass(FName ClassName) c
 // Default to a NON-Nanite project (bNaniteInverted == true ⇒ "Project uses Nanite"
 // unchecked). Nanite rules then flag meshes that have Nanite enabled.
 bool AuditRules::bNaniteInverted = true;
+bool AuditRules::bVTEnabled = false;
+bool AuditRules::bTextureStreamingEnabled = true;
 TMap<FString, int32> AuditRules::RuleConfig;
 TMap<FString, FString> AuditRules::NamingPrefixes;
 TMap<FString, bool> AuditRules::RuleEnabled;
@@ -112,6 +114,8 @@ void AuditRules::ResetRuleConfig()
 {
 	// Non-Nanite project by default (see bNaniteInverted definition above).
 	bNaniteInverted = true;
+	bVTEnabled = false;
+	bTextureStreamingEnabled = true;
 
 	RuleConfig.Empty();
 	RuleConfig.Add(TEXT("HighTextureSampling_Warning"), 6);
@@ -133,6 +137,19 @@ void AuditRules::ResetRuleConfig()
 	RuleConfig.Add(TEXT("HighUVChannel_Warning"), 3);
 	RuleConfig.Add(TEXT("WAVLength_Warning"), 10);
 	RuleConfig.Add(TEXT("WAVLength_Critical"), 30);
+	RuleConfig.Add(TEXT("TextureStreamingBudget_Warning"), 8);
+	RuleConfig.Add(TEXT("TextureStreamingBudget_Critical"), 16);
+	RuleConfig.Add(TEXT("NiagaraEmitters_Warning"), 8);
+	RuleConfig.Add(TEXT("NiagaraEmitters_Critical"), 15);
+	RuleConfig.Add(TEXT("NiagaraMaterials_Warning"), 4);
+	RuleConfig.Add(TEXT("NiagaraMaterials_Critical"), 8);
+	RuleConfig.Add(TEXT("NiagaraMeshes_Warning"), 3);
+	RuleConfig.Add(TEXT("NiagaraMeshes_Critical"), 6);
+	RuleConfig.Add(TEXT("NotifyCount_Warning"), 10);
+	RuleConfig.Add(TEXT("NotifyCount_Critical"), 25);
+	RuleConfig.Add(TEXT("CurveCount_Warning"), 20);
+	RuleConfig.Add(TEXT("CurveCount_Critical"), 50);
+	RuleConfig.Add(TEXT("AnimCompression_WarnFramesPerSec"), 30);
 
 	// Naming convention defaults
 	NamingPrefixes.Empty();
@@ -171,6 +188,13 @@ void AuditRules::ResetRuleConfig()
 	RuleEnabled.Add(TEXT("MissingPhysicsAsset"), true);
 	RuleEnabled.Add(TEXT("UnusedAsset"), true);
 	RuleEnabled.Add(TEXT("LongAnimSequence"), true);
+	RuleEnabled.Add(TEXT("NiagaraHighRendererCount"), true);
+	RuleEnabled.Add(TEXT("NiagaraHighMaterialCount"), true);
+	RuleEnabled.Add(TEXT("NiagaraHighMeshCount"), true);
+	RuleEnabled.Add(TEXT("HighNotifyCount"), true);
+	RuleEnabled.Add(TEXT("HighCurveCount"), true);
+	RuleEnabled.Add(TEXT("AdditiveAnimation"), true);
+	RuleEnabled.Add(TEXT("AnimationCompression"), true);
 	RuleEnabled.Add(TEXT("MasterMaterialBloat"), true);
 	RuleEnabled.Add(TEXT("MaterialInstanceBloat"), true);
 	RuleEnabled.Add(TEXT("MaterialInstanceMinimalOverrides"), true);
@@ -376,6 +400,12 @@ void AuditRules::LoadConfig()
 	// Load bNaniteInverted
 	ConfigFile.GetBool(*Section, TEXT("bNaniteInverted"), bNaniteInverted);
 
+	// Load bVTEnabled
+	ConfigFile.GetBool(*Section, TEXT("bVTEnabled"), bVTEnabled);
+
+	// Load bTextureStreamingEnabled
+	ConfigFile.GetBool(*Section, TEXT("bTextureStreamingEnabled"), bTextureStreamingEnabled);
+
 	// Load RuleConfig thresholds
 	TArray<FString> ThresholdKeys;
 	ConfigFile.GetArray(*Section, TEXT("ThresholdKeys"), ThresholdKeys);
@@ -435,6 +465,12 @@ void AuditRules::SaveConfig()
 	// Save bNaniteInverted
 	ConfigFile.SetBool(*Section, TEXT("bNaniteInverted"), bNaniteInverted);
 
+	// Save bVTEnabled
+	ConfigFile.SetBool(*Section, TEXT("bVTEnabled"), bVTEnabled);
+
+	// Save bTextureStreamingEnabled
+	ConfigFile.SetBool(*Section, TEXT("bTextureStreamingEnabled"), bTextureStreamingEnabled);
+
 	// Save RuleConfig. (Stale individual keys are harmless — reads go through the
 	// ThresholdKeys/RuleKeys/PrefixKeys arrays, which are rewritten in full here.)
 	TArray<FString> ThresholdKeys;
@@ -492,6 +528,7 @@ void AuditRules::RegisterBuiltInRules()
 	Registry.RegisterRule(Rule_VirtualTextureMismatch);
 	Registry.RegisterRule(Rule_NeverStream);
 	Registry.RegisterRule(Rule_TextureLODGroup);
+	Registry.RegisterRule(Rule_TextureStreamingBudget);
 
 	// Sound
 	Registry.RegisterRule(Rule_MissingSoundClass);
@@ -512,6 +549,15 @@ void AuditRules::RegisterBuiltInRules()
 
 	// Animation
 	Registry.RegisterRule(Rule_LongAnimSequence);
+	Registry.RegisterRule(Rule_HighNotifyCount);
+	Registry.RegisterRule(Rule_HighCurveCount);
+	Registry.RegisterRule(Rule_AdditiveAnimation);
+	Registry.RegisterRule(Rule_AnimationCompression);
+
+	// Niagara
+	Registry.RegisterRule(Rule_NiagaraHighRendererCount);
+	Registry.RegisterRule(Rule_NiagaraHighMaterialCount);
+	Registry.RegisterRule(Rule_NiagaraHighMeshCount);
 
 	// Material / Material Instance
 	Registry.RegisterRule(Rule_MasterMaterialBloat);

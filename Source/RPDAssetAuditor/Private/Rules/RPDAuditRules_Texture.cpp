@@ -106,6 +106,10 @@ FRPDAuditRule AuditRules::Rule_VirtualTextureMismatch = {
 	ERPDAuditSeverity::Info, 3,
 	[](const FAssetData& AssetData, FRPDAuditIssue& OutIssue) -> bool
 	{
+		// Skip when project doesn't use virtual textures — all textures are expected non-VT.
+		if (!AuditRules::bVTEnabled)
+			return false;
+
 		if (UTexture2D* Tex = Cast<UTexture2D>(AssetData.GetAsset()))
 		{
 			bool bIsVT = Tex->VirtualTextureStreaming;
@@ -129,6 +133,10 @@ FRPDAuditRule AuditRules::Rule_NeverStream = {
 	ERPDAuditSeverity::Warning, 5,
 	[](const FAssetData& AssetData, FRPDAuditIssue& OutIssue) -> bool
 	{
+		// Skip when texture streaming is disabled — NeverStream is the default and expected.
+		if (!AuditRules::bTextureStreamingEnabled)
+			return false;
+
 		if (UTexture2D* Tex = Cast<UTexture2D>(AssetData.GetAsset()))
 		{
 			if (Tex->NeverStream)
@@ -156,6 +164,10 @@ FRPDAuditRule AuditRules::Rule_TextureLODGroup = {
 	ERPDAuditSeverity::Info, 2,
 	[](const FAssetData& AssetData, FRPDAuditIssue& OutIssue) -> bool
 	{
+		// LOD group hints are less meaningful when texture streaming is disabled.
+		if (!AuditRules::bTextureStreamingEnabled)
+			return false;
+
 		if (UTexture2D* Tex = Cast<UTexture2D>(AssetData.GetAsset()))
 		{
 			const FIntPoint Eff = EffectiveTextureSize(Tex);
@@ -179,6 +191,95 @@ FRPDAuditRule AuditRules::Rule_TextureLODGroup = {
 					TEXT("%s — small texture in World group. Consider TEXTUREGROUP_UI or similar."),
 					*TextureSizeLabel(Tex));
 				OutIssue.SeverityScore = 1;
+				return true;
+			}
+		}
+		return false;
+	}
+};
+
+// Rough bytes-per-pixel for common cooked formats. The editor format is usually
+// PF_B8G8R8A8 (4 BPP), but the runtime cost depends on the compressed format:
+//   DXT1/BC1: 0.5 BPP | DXT5/BC3: 1 BPP | BC4: 0.5 BPP | BC5: 1 BPP
+//   BC6H: 1 BPP | BC7: 1 BPP | RGBA8: 4 BPP | G8: 1 BPP
+// We default to a conservative 1 BPP (BC3/BC7 class) when guesting off the import
+// type, since most game textures compress to one of those.
+static double EstimatedCookedBPP(const UTexture2D* Tex)
+{
+	if (!Tex) return 1.0;
+
+	// Greyscale/alpha-only → DXT1 or BC4
+	if (Tex->CompressionSettings == TC_Grayscale ||
+		Tex->CompressionSettings == TC_Alpha)
+		return 0.5;
+
+	// Normal maps → BC5
+	if (Tex->CompressionSettings == TC_Normalmap)
+		return 1.0;
+
+	// HDR → BC6H (1 BPP)
+	if (Tex->CompressionSettings == TC_HDR ||
+		Tex->CompressionSettings == TC_HDR_Compressed)
+		return 1.0;
+
+	// Default textures (TC_Default, TC_Masks, TC_Displacementmap) → DXT1/BC1 or
+	// BC3/BC7 depending on alpha. If it has alpha or is sRGB masked, assume 1 BPP.
+	return 1.0;
+}
+
+// Estimate total VRAM for a fully-resident texture (all mips loaded).
+// Formula: sum_{i=0}^{Mips-1} (max(1,W>>i) * max(1,H>>i)) * BPP
+static int64 EstimateVRAM(const UTexture2D* Tex)
+{
+	const FIntPoint Eff = EffectiveTextureSize(Tex);
+	const double BPP = EstimatedCookedBPP(Tex);
+	int32 NumMips = Tex->GetNumMips();
+	if (NumMips <= 0)
+	{
+		// If the texture hasn't been built yet, assume full chain down to 1x1.
+		int32 MaxDim = FMath::Max(Eff.X, Eff.Y);
+		NumMips = FMath::FloorLog2(MaxDim) + 1;
+	}
+
+	int64 TotalBytes = 0;
+	int32 W = Eff.X;
+	int32 H = Eff.Y;
+	for (int32 Mip = 0; Mip < NumMips; ++Mip)
+	{
+		TotalBytes += static_cast<int64>(FMath::Max(1, W) * FMath::Max(1, H) * BPP);
+		W >>= 1;
+		H >>= 1;
+	}
+	return TotalBytes;
+}
+
+FRPDAuditRule AuditRules::Rule_TextureStreamingBudget = {
+	TEXT("TextureStreamingBudget"),
+	TEXT("Texture has a high estimated VRAM footprint — consider reducing resolution or improving compression."),
+	UTexture2D::StaticClass()->GetFName(),
+	ERPDAuditSeverity::Info, 3,
+	[](const FAssetData& AssetData, FRPDAuditIssue& OutIssue) -> bool
+	{
+		if (UTexture2D* Tex = Cast<UTexture2D>(AssetData.GetAsset()))
+		{
+			const FIntPoint Eff = EffectiveTextureSize(Tex);
+			const int64 VRAM = EstimateVRAM(Tex);
+			const int64 WarnBytes = static_cast<int64>(RuleConfig.FindRef(TEXT("TextureStreamingBudget_Warning"), 8)) * 1048576LL;
+			const int64 CritBytes = static_cast<int64>(RuleConfig.FindRef(TEXT("TextureStreamingBudget_Critical"), 16)) * 1048576LL;
+
+			if (VRAM > CritBytes)
+			{
+				OutIssue.Detail = FString::Printf(
+					TEXT("%s — ~%.0f MB fully resident. High VRAM cost; consider reducing resolution or enabling streaming."),
+					*TextureSizeLabel(Tex), static_cast<double>(VRAM) / 1048576.0);
+				return true;
+			}
+			if (VRAM > WarnBytes)
+			{
+				OutIssue.Detail = FString::Printf(
+					TEXT("%s — ~%.0f MB fully resident. Verify this texture needs the full resolution."),
+					*TextureSizeLabel(Tex), static_cast<double>(VRAM) / 1048576.0);
+				OutIssue.SeverityScore = 2;
 				return true;
 			}
 		}
